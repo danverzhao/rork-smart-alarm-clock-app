@@ -6,4 +6,5 @@ export interface Alarm {
   isEnabled: boolean;
   createdAt: number;
   notificationId?: string;
+  sound?: string;
 }

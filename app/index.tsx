@@ -136,11 +136,12 @@ function AlarmItem({ alarm }: { alarm: Alarm }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { alarms, isLoading, alarmDuration, enableAll, disableAll, clearAll, updateAlarmDuration } = useAlarms();
+  const { alarms, isLoading, alarmDuration, defaultSound, soundOptions, enableAll, disableAll, clearAll, updateAlarmDuration, updateDefaultSound } = useAlarms();
   const [ringingAlarm, setRingingAlarm] = useState<Alarm | null>(null);
   const ringingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [tempDuration, setTempDuration] = useState<string>('5');
+  const [tempSound, setTempSound] = useState<string>('default');
 
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
@@ -223,6 +224,7 @@ export default function HomeScreen() {
   const handleOpenSettings = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTempDuration(alarmDuration.toString());
+    setTempSound(defaultSound);
     setShowSettings(true);
   };
 
@@ -231,6 +233,7 @@ export default function HomeScreen() {
     const duration = parseInt(tempDuration, 10);
     if (!isNaN(duration) && duration > 0 && duration <= 300) {
       updateAlarmDuration(duration);
+      updateDefaultSound(tempSound);
       setShowSettings(false);
     } else {
       Alert.alert('Invalid Duration', 'Please enter a duration between 1 and 300 seconds.');
@@ -380,6 +383,37 @@ export default function HomeScreen() {
             />
           </View>
           <Text style={styles.settingHint}>Duration: 1-300 seconds</Text>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Default Notification Sound</Text>
+            <View style={styles.soundOptionsContainer}>
+              {soundOptions.map((option) => (
+                <Pressable
+                  key={option.value}
+                  style={({ pressed }) => [
+                    styles.soundOption,
+                    tempSound === option.value && styles.soundOptionSelected,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setTempSound(option.value);
+                  }}
+                >
+                  <View style={[
+                    styles.soundOptionRadio,
+                    tempSound === option.value && styles.soundOptionRadioSelected,
+                  ]} />
+                  <Text style={[
+                    styles.soundOptionText,
+                    tempSound === option.value && styles.soundOptionTextSelected,
+                  ]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
           <View style={styles.modalButtons}>
             <Pressable
               style={({ pressed }) => [
@@ -727,5 +761,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#ffffff',
+  },
+  soundOptionsContainer: {
+    gap: 8,
+    marginTop: 8,
+  },
+  soundOption: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#ffffff12',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ffffff20',
+    gap: 12,
+  },
+  soundOptionSelected: {
+    backgroundColor: '#007AFF20',
+    borderColor: '#007AFF',
+  },
+  soundOptionRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ffffff40',
+  },
+  soundOptionRadioSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#007AFF',
+  },
+  soundOptionText: {
+    fontSize: 16,
+    color: '#ffffff90',
+  },
+  soundOptionTextSelected: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '600' as const,
   },
 });
