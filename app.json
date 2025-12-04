@@ -15,7 +15,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.smart-alarm-clock-app-ljs4bh7"
+      "bundleIdentifier": "app.rork.smart-alarm-clock-app-ljs4bh7",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "backgroundModes": ["audio"]
     },
     "android": {
       "adaptiveIcon": {
