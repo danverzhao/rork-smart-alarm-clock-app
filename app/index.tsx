@@ -2,6 +2,7 @@ import { useAlarms } from '@/contexts/AlarmContext';
 import { useRouter } from 'expo-router';
 import { Plus, Power, PowerOff, Trash2, Clock, Bell, Settings } from 'lucide-react-native';
 import React, { useCallback, useRef, useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import {
   ActivityIndicator,
   Alert,
@@ -142,32 +143,41 @@ export default function HomeScreen() {
   const [tempDuration, setTempDuration] = useState<string>('5');
 
   useEffect(() => {
-    const checkAlarms = setInterval(() => {
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentSecond = now.getSeconds();
+    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      const alarmId = notification.request.content.data.alarmId as string;
+      const triggeredAlarm = alarms.find((a) => a.id === alarmId);
 
-      if (currentSecond === 0) {
-        const triggeredAlarm = alarms.find(
-          (alarm) => alarm.isEnabled && alarm.hour === currentHour && alarm.minute === currentMinute
-        );
+      if (triggeredAlarm && !ringingAlarm) {
+        console.log('Alarm notification received:', triggeredAlarm);
+        setRingingAlarm(triggeredAlarm);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        if (triggeredAlarm && !ringingAlarm) {
-          console.log('Alarm triggered:', triggeredAlarm);
-          setRingingAlarm(triggeredAlarm);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-          ringingTimeoutRef.current = setTimeout(() => {
-            console.log('Auto-stopping alarm');
-            setRingingAlarm(null);
-          }, alarmDuration * 1000);
-        }
+        ringingTimeoutRef.current = setTimeout(() => {
+          console.log('Auto-stopping alarm');
+          setRingingAlarm(null);
+        }, alarmDuration * 1000);
       }
-    }, 1000);
+    });
+
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const alarmId = response.notification.request.content.data.alarmId as string;
+      const triggeredAlarm = alarms.find((a) => a.id === alarmId);
+
+      if (triggeredAlarm) {
+        console.log('Alarm notification tapped:', triggeredAlarm);
+        setRingingAlarm(triggeredAlarm);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        ringingTimeoutRef.current = setTimeout(() => {
+          console.log('Auto-stopping alarm');
+          setRingingAlarm(null);
+        }, alarmDuration * 1000);
+      }
+    });
 
     return () => {
-      clearInterval(checkAlarms);
+      subscription.remove();
+      responseSubscription.remove();
       if (ringingTimeoutRef.current) {
         clearTimeout(ringingTimeoutRef.current);
       }

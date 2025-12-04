@@ -5,4 +5,5 @@ export interface Alarm {
   label: string;
   isEnabled: boolean;
   createdAt: number;
+  notificationId?: string;
 }

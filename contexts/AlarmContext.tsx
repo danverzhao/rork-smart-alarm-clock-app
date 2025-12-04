@@ -1,7 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import type { Alarm } from '@/types/alarm';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const STORAGE_KEY = 'alarms';
 const SETTINGS_KEY = 'alarm_settings';
@@ -62,7 +73,57 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     }
   };
 
-  const addAlarm = (hour: number, minute: number, label: string) => {
+  const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Notification permissions not granted');
+        return undefined;
+      }
+
+      const now = new Date();
+      const alarmTime = new Date();
+      alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
+
+      if (alarmTime <= now) {
+        alarmTime.setDate(alarmTime.getDate() + 1);
+      }
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: alarm.label || 'Alarm',
+          body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          data: { alarmId: alarm.id },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: alarm.hour,
+          minute: alarm.minute,
+        },
+      });
+
+      console.log('Scheduled notification:', notificationId, 'for', alarmTime);
+      return notificationId;
+    } catch (error) {
+      console.error('Failed to schedule notification:', error);
+      return undefined;
+    }
+  };
+
+  const cancelNotification = async (notificationId?: string) => {
+    if (notificationId) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notificationId);
+        console.log('Cancelled notification:', notificationId);
+      } catch (error) {
+        console.error('Failed to cancel notification:', error);
+      }
+    }
+  };
+
+  const addAlarm = async (hour: number, minute: number, label: string) => {
     const newAlarm: Alarm = {
       id: Date.now().toString() + Math.random().toString(36),
       hour,
@@ -71,6 +132,10 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       isEnabled: true,
       createdAt: Date.now(),
     };
+
+    const notificationId = await scheduleNotification(newAlarm);
+    newAlarm.notificationId = notificationId;
+
     const updated = [...alarms, newAlarm].sort((a, b) => {
       if (a.hour !== b.hour) return a.hour - b.hour;
       return a.minute - b.minute;
@@ -79,20 +144,24 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     saveAlarms(updated);
   };
 
-  const addMultipleAlarms = (startHour: number, startMinute: number, intervalMinutes: number, count: number) => {
+  const addMultipleAlarms = async (startHour: number, startMinute: number, intervalMinutes: number, count: number) => {
     const newAlarms: Alarm[] = [];
     let currentHour = startHour;
     let currentMinute = startMinute;
 
     for (let i = 0; i < count; i++) {
-      newAlarms.push({
+      const alarm: Alarm = {
         id: Date.now().toString() + Math.random().toString(36),
         hour: currentHour,
         minute: currentMinute,
         label: '',
         isEnabled: true,
         createdAt: Date.now() + i,
-      });
+      };
+
+      const notificationId = await scheduleNotification(alarm);
+      alarm.notificationId = notificationId;
+      newAlarms.push(alarm);
 
       currentMinute += intervalMinutes;
       while (currentMinute >= 60) {
@@ -112,18 +181,36 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     saveAlarms(updated);
   };
 
-  const deleteAlarm = (id: string) => {
+  const deleteAlarm = async (id: string) => {
+    const alarm = alarms.find((a) => a.id === id);
+    if (alarm?.notificationId) {
+      await cancelNotification(alarm.notificationId);
+    }
     const updated = alarms.filter((alarm) => alarm.id !== id);
     setAlarms(updated);
     saveAlarms(updated);
   };
 
-  const toggleAlarm = (id: string) => {
-    const updated = alarms.map((alarm) =>
-      alarm.id === id ? { ...alarm, isEnabled: !alarm.isEnabled } : alarm
-    );
-    setAlarms(updated);
-    saveAlarms(updated);
+  const toggleAlarm = async (id: string) => {
+    const alarm = alarms.find((a) => a.id === id);
+    if (!alarm) return;
+
+    if (alarm.isEnabled && alarm.notificationId) {
+      await cancelNotification(alarm.notificationId);
+      const updated = alarms.map((a) =>
+        a.id === id ? { ...a, isEnabled: false, notificationId: undefined } : a
+      );
+      setAlarms(updated);
+      saveAlarms(updated);
+    } else {
+      const updatedAlarm = { ...alarm, isEnabled: true };
+      const notificationId = await scheduleNotification(updatedAlarm);
+      const updated = alarms.map((a) =>
+        a.id === id ? { ...a, isEnabled: true, notificationId } : a
+      );
+      setAlarms(updated);
+      saveAlarms(updated);
+    }
   };
 
   const updateAlarmLabel = (id: string, label: string) => {
@@ -134,19 +221,33 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     saveAlarms(updated);
   };
 
-  const enableAll = () => {
-    const updated = alarms.map((alarm) => ({ ...alarm, isEnabled: true }));
+  const enableAll = async () => {
+    const updated = await Promise.all(
+      alarms.map(async (alarm) => {
+        if (!alarm.isEnabled) {
+          const notificationId = await scheduleNotification({ ...alarm, isEnabled: true });
+          return { ...alarm, isEnabled: true, notificationId };
+        }
+        return alarm;
+      })
+    );
     setAlarms(updated);
     saveAlarms(updated);
   };
 
-  const disableAll = () => {
-    const updated = alarms.map((alarm) => ({ ...alarm, isEnabled: false }));
+  const disableAll = async () => {
+    await Promise.all(
+      alarms.map((alarm) => alarm.notificationId && cancelNotification(alarm.notificationId))
+    );
+    const updated = alarms.map((alarm) => ({ ...alarm, isEnabled: false, notificationId: undefined }));
     setAlarms(updated);
     saveAlarms(updated);
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    await Promise.all(
+      alarms.map((alarm) => alarm.notificationId && cancelNotification(alarm.notificationId))
+    );
     setAlarms([]);
     saveAlarms([]);
   };
