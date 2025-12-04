@@ -5,32 +5,22 @@ import * as Notifications from 'expo-notifications';
 import type { Alarm } from '@/types/alarm';
 
 Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    console.log('Handling notification:', notification);
-    return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    };
-  },
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
 });
 
 const STORAGE_KEY = 'alarms';
 const SETTINGS_KEY = 'alarm_settings';
 
-const SOUND_OPTIONS = [
-  { label: 'Default', value: 'default' },
-  { label: 'Notification 1', value: 'noti1' },
-  { label: 'Notification 2', value: 'noti2' },
-];
-
 export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [alarmDuration, setAlarmDuration] = useState<number>(5);
-  const [defaultSound, setDefaultSound] = useState<string>('default');
 
   useEffect(() => {
     loadAlarms();
@@ -68,7 +58,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       if (stored) {
         const settings = JSON.parse(stored);
         setAlarmDuration(settings.alarmDuration || 5);
-        setDefaultSound(settings.defaultSound || 'default');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -78,72 +67,12 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const updateAlarmDuration = async (duration: number) => {
     try {
       setAlarmDuration(duration);
-      const stored = await AsyncStorage.getItem(SETTINGS_KEY);
-      const settings = stored ? JSON.parse(stored) : {};
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, alarmDuration: duration }));
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ alarmDuration: duration }));
     } catch (error) {
       console.error('Failed to save settings:', error);
     }
   };
 
-  const updateDefaultSound = async (sound: string) => {
-    try {
-      setDefaultSound(sound);
-      const stored = await AsyncStorage.getItem(SETTINGS_KEY);
-      const settings = stored ? JSON.parse(stored) : {};
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, defaultSound: sound }));
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-    }
-  };
-
-  // const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
-  //   try {
-  //     const { status } = await Notifications.requestPermissionsAsync();
-  //     if (status !== 'granted') {
-  //       console.log('Notification permissions not granted');
-  //       return undefined;
-  //     }
-
-  //     const now = new Date();
-  //     const alarmTime = new Date();
-  //     alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
-
-  //     if (alarmTime <= now) {
-  //       alarmTime.setDate(alarmTime.getDate() + 1);
-  //     }
-
-  //     const soundToUse = alarm.sound || defaultSound;
-  //     let soundConfig: boolean | string = true;
-      
-  //     if (soundToUse === 'noti1') {
-  //       soundConfig = 'noti1.wav';
-  //     } else if (soundToUse === 'noti2') {
-  //       soundConfig = 'noti2.wav';
-  //     }
-
-  //     const notificationId = await Notifications.scheduleNotificationAsync({
-  //       content: {
-  //         title: alarm.label || 'Alarm',
-  //         body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
-  //         sound: soundConfig,
-  //         priority: Notifications.AndroidNotificationPriority.MAX,
-  //         data: { alarmId: alarm.id },
-  //       },
-  //       trigger: {
-  //         type: Notifications.SchedulableTriggerInputTypes.DAILY,
-  //         hour: alarm.hour,
-  //         minute: alarm.minute,
-  //       },
-  //     });
-
-  //     console.log('Scheduled notification:', notificationId, 'for', alarmTime, 'with sound:', soundToUse);
-  //     return notificationId;
-  //   } catch (error) {
-  //     console.error('Failed to schedule notification:', error);
-  //     return undefined;
-  //   }
-  // };
   const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
@@ -151,57 +80,38 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         console.log('Notification permissions not granted');
         return undefined;
       }
-  
-      const soundToUse = alarm.sound || defaultSound;
-      let soundConfig: boolean | string = true;
-      
-      if (soundToUse === 'noti1') {
-        soundConfig = 'noti1.wav';
-      } else if (soundToUse === 'noti2') {
-        soundConfig = 'noti2.wav';
-      }
-  
+
       const now = new Date();
       const alarmTime = new Date();
       alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
-      
+
       if (alarmTime <= now) {
         alarmTime.setDate(alarmTime.getDate() + 1);
       }
-  
-      console.log('Scheduling alarm for:', alarmTime.toLocaleString(), 'Sound:', soundToUse);
-  
+
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
           body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
-          sound: soundConfig,
+          sound: true,
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
-          categoryIdentifier: 'alarm',
-          vibrate: [0, 250, 250, 250],
-          sticky: false,
-          autoDismiss: true,
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour: alarm.hour,
           minute: alarm.minute,
-          repeats: true,
         },
       });
-  
-      console.log('✅ Notification scheduled successfully:', notificationId);
-      
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      console.log('Total scheduled notifications:', scheduled.length);
-      
+
+      console.log('Scheduled notification:', notificationId, 'for', alarmTime);
       return notificationId;
     } catch (error) {
-      console.error('❌ Failed to schedule notification:', error);
+      console.error('Failed to schedule notification:', error);
       return undefined;
     }
   };
+
   const cancelNotification = async (notificationId?: string) => {
     if (notificationId) {
       try {
@@ -221,7 +131,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       label,
       isEnabled: true,
       createdAt: Date.now(),
-      sound: defaultSound,
     };
 
     const notificationId = await scheduleNotification(newAlarm);
@@ -248,7 +157,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         label: '',
         isEnabled: true,
         createdAt: Date.now() + i,
-        sound: defaultSound,
       };
 
       const notificationId = await scheduleNotification(alarm);
@@ -348,15 +256,12 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     alarms,
     isLoading,
     alarmDuration,
-    defaultSound,
-    soundOptions: SOUND_OPTIONS,
     addAlarm,
     addMultipleAlarms,
     deleteAlarm,
     toggleAlarm,
     updateAlarmLabel,
     updateAlarmDuration,
-    updateDefaultSound,
     enableAll,
     disableAll,
     clearAll,

@@ -1,55 +1,37 @@
-import { Stack } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AlarmProvider } from '@/contexts/AlarmContext';
-import { useEffect } from 'react';
-import * as Notifications from 'expo-notifications';
+// template
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AlarmProvider } from "@/contexts/AlarmContext";
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function RootLayoutNav() {
+  return (
+    <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="add-alarm" options={{ presentation: "modal", title: "Add Alarm" }} />
+      <Stack.Screen name="multiple-alarms" options={{ presentation: "modal", title: "Create Multiple Alarms" }} />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   useEffect(() => {
-    const setupNotificationCategories = async () => {
-      await Notifications.setNotificationCategoryAsync('alarm', [
-        {
-          identifier: 'dismiss',
-          buttonTitle: 'Dismiss',
-          options: {
-            opensAppToForeground: false,
-          },
-        },
-      ]);
-      console.log('Notification categories set up');
-    };
-
-    setupNotificationCategories();
+    SplashScreen.hideAsync();
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <AlarmProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen
-            name="add-alarm"
-            options={{
-              presentation: 'modal',
-              headerShown: true,
-              headerTitle: 'Add Alarm',
-              headerStyle: { backgroundColor: '#1a1a2e' },
-              headerTintColor: '#ffffff',
-            }}
-          />
-          <Stack.Screen
-            name="multiple-alarms"
-            options={{
-              presentation: 'modal',
-              headerShown: true,
-              headerTitle: 'Multiple Alarms',
-              headerStyle: { backgroundColor: '#1a1a2e' },
-              headerTintColor: '#ffffff',
-            }}
-          />
-        </Stack>
+        <GestureHandlerRootView>
+          <RootLayoutNav />
+        </GestureHandlerRootView>
       </AlarmProvider>
     </QueryClientProvider>
   );
