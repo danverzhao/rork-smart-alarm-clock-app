@@ -94,6 +94,53 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     }
   };
 
+  // const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
+  //   try {
+  //     const { status } = await Notifications.requestPermissionsAsync();
+  //     if (status !== 'granted') {
+  //       console.log('Notification permissions not granted');
+  //       return undefined;
+  //     }
+
+  //     const now = new Date();
+  //     const alarmTime = new Date();
+  //     alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
+
+  //     if (alarmTime <= now) {
+  //       alarmTime.setDate(alarmTime.getDate() + 1);
+  //     }
+
+  //     const soundToUse = alarm.sound || defaultSound;
+  //     let soundConfig: boolean | string = true;
+      
+  //     if (soundToUse === 'noti1') {
+  //       soundConfig = 'noti1.wav';
+  //     } else if (soundToUse === 'noti2') {
+  //       soundConfig = 'noti2.wav';
+  //     }
+
+  //     const notificationId = await Notifications.scheduleNotificationAsync({
+  //       content: {
+  //         title: alarm.label || 'Alarm',
+  //         body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
+  //         sound: soundConfig,
+  //         priority: Notifications.AndroidNotificationPriority.MAX,
+  //         data: { alarmId: alarm.id },
+  //       },
+  //       trigger: {
+  //         type: Notifications.SchedulableTriggerInputTypes.DAILY,
+  //         hour: alarm.hour,
+  //         minute: alarm.minute,
+  //       },
+  //     });
+
+  //     console.log('Scheduled notification:', notificationId, 'for', alarmTime, 'with sound:', soundToUse);
+  //     return notificationId;
+  //   } catch (error) {
+  //     console.error('Failed to schedule notification:', error);
+  //     return undefined;
+  //   }
+  // };
   const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
@@ -101,15 +148,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         console.log('Notification permissions not granted');
         return undefined;
       }
-
-      const now = new Date();
-      const alarmTime = new Date();
-      alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
-
-      if (alarmTime <= now) {
-        alarmTime.setDate(alarmTime.getDate() + 1);
-      }
-
+  
       const soundToUse = alarm.sound || defaultSound;
       let soundConfig: boolean | string = true;
       
@@ -118,7 +157,17 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       } else if (soundToUse === 'noti2') {
         soundConfig = 'noti2.wav';
       }
-
+  
+      // Calculate next alarm time
+      const now = new Date();
+      const alarmTime = new Date();
+      alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
+      
+      if (alarmTime <= now) {
+        alarmTime.setDate(alarmTime.getDate() + 1);
+      }
+  
+      // Use CALENDAR trigger with repeats for better reliability
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
@@ -126,14 +175,16 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
           sound: soundConfig,
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
+          categoryIdentifier: 'alarm',
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          repeats: true,
           hour: alarm.hour,
           minute: alarm.minute,
         },
       });
-
+  
       console.log('Scheduled notification:', notificationId, 'for', alarmTime, 'with sound:', soundToUse);
       return notificationId;
     } catch (error) {
@@ -141,7 +192,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       return undefined;
     }
   };
-
   const cancelNotification = async (notificationId?: string) => {
     if (notificationId) {
       try {
