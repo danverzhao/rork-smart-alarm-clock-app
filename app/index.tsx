@@ -336,7 +336,16 @@ export default function HomeScreen() {
     </LinearGradient>
 
     {ringingAlarm && (
-      <View style={styles.ringingOverlay}>
+      <Pressable 
+        style={styles.ringingOverlay}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (ringingTimeoutRef.current) {
+            clearTimeout(ringingTimeoutRef.current);
+          }
+          setRingingAlarm(null);
+        }}
+      >
         <View style={styles.ringingContainer}>
           <View style={styles.ringingIconContainer}>
             <Bell size={64} color="#ffffff" />
@@ -353,9 +362,9 @@ export default function HomeScreen() {
           {ringingAlarm.label && (
             <Text style={styles.ringingLabel}>{ringingAlarm.label}</Text>
           )}
-          <Text style={styles.ringingSubtext}>Will stop in {alarmDuration} seconds</Text>
+          <Text style={styles.ringingSubtext}>Tap anywhere to dismiss</Text>
         </View>
-      </View>
+      </Pressable>
     )}
 
     <Modal
