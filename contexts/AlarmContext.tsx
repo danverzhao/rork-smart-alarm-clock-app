@@ -114,9 +114,9 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       let soundConfig: boolean | string = true;
       
       if (soundToUse === 'noti1') {
-        soundConfig = require('../assets/sounds/noti1.wav');
+        soundConfig = 'noti1.wav';
       } else if (soundToUse === 'noti2') {
-        soundConfig = require('../assets/sounds/noti2.wav');
+        soundConfig = 'noti2.wav';
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync({
