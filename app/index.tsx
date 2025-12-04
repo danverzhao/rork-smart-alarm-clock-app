@@ -339,7 +339,17 @@ export default function HomeScreen() {
     </LinearGradient>
 
     {ringingAlarm && (
-      <View style={styles.ringingOverlay}>
+      <Pressable 
+        style={styles.ringingOverlay}
+        onPress={() => {
+          console.log('Notification dismissed by tap');
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (ringingTimeoutRef.current) {
+            clearTimeout(ringingTimeoutRef.current);
+          }
+          setRingingAlarm(null);
+        }}
+      >
         <View style={styles.ringingContainer}>
           <View style={styles.ringingIconContainer}>
             <Bell size={64} color="#ffffff" />
@@ -357,8 +367,9 @@ export default function HomeScreen() {
             <Text style={styles.ringingLabel}>{ringingAlarm.label}</Text>
           )}
           <Text style={styles.ringingSubtext}>Will stop in {alarmDuration} seconds</Text>
+          <Text style={styles.ringingDismiss}>Tap anywhere to dismiss</Text>
         </View>
-      </View>
+      </Pressable>
     )}
 
     <Modal
@@ -682,6 +693,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff60',
     marginTop: 8,
+  },
+  ringingDismiss: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#007AFF',
+    marginTop: 24,
   },
   modalOverlay: {
     flex: 1,
