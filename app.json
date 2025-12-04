@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.smart-alarm-clock-app-ljs4bh7"
+      "bundleIdentifier": "app.rork.smart-alarm-clock-app-ljs4bh7",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -56,6 +59,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://rork.com/"
+      },
+      "eas": {
+        "projectId": "938e9549-f8ac-4a1d-b645-ea077f892bab"
+      }
     }
   }
 }
