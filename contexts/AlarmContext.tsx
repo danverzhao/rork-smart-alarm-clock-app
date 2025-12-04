@@ -5,13 +5,16 @@ import * as Notifications from 'expo-notifications';
 import type { Alarm } from '@/types/alarm';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    console.log('Handling notification:', notification);
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 const STORAGE_KEY = 'alarms';
@@ -158,7 +161,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         soundConfig = 'noti2.wav';
       }
   
-      // Calculate next alarm time
       const now = new Date();
       const alarmTime = new Date();
       alarmTime.setHours(alarm.hour, alarm.minute, 0, 0);
@@ -167,7 +169,8 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         alarmTime.setDate(alarmTime.getDate() + 1);
       }
   
-      // Use CALENDAR trigger with repeats for better reliability
+      console.log('Scheduling alarm for:', alarmTime.toLocaleString(), 'Sound:', soundToUse);
+  
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
@@ -176,19 +179,26 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
           categoryIdentifier: 'alarm',
+          vibrate: [0, 250, 250, 250],
+          sticky: false,
+          autoDismiss: true,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-          repeats: true,
           hour: alarm.hour,
           minute: alarm.minute,
+          repeats: true,
         },
       });
   
-      console.log('Scheduled notification:', notificationId, 'for', alarmTime, 'with sound:', soundToUse);
+      console.log('✅ Notification scheduled successfully:', notificationId);
+      
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      console.log('Total scheduled notifications:', scheduled.length);
+      
       return notificationId;
     } catch (error) {
-      console.error('Failed to schedule notification:', error);
+      console.error('❌ Failed to schedule notification:', error);
       return undefined;
     }
   };

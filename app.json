@@ -19,7 +19,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "backgroundModes": ["audio"]
+      "backgroundModes": [
+        "audio"
+      ]
     },
     "android": {
       "adaptiveIcon": {
