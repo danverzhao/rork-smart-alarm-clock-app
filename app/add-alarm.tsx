@@ -14,17 +14,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function AddAlarmScreen() {
   const router = useRouter();
   const { addAlarm } = useAlarms();
-  const [hour, setHour] = useState<number>(9);
-  const [minute, setMinute] = useState<number>(0);
+  const [date, setDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(9);
+    d.setMinutes(0);
+    return d;
+  });
   const [label, setLabel] = useState<string>('');
 
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addAlarm(hour, minute, label);
+    addAlarm(date.getHours(), date.getMinutes(), label);
     router.back();
   };
 
@@ -33,34 +38,11 @@ export default function AddAlarmScreen() {
     router.back();
   };
 
-  const incrementHour = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHour((prev) => (prev + 1) % 24);
+  const onTimeChange = (_event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
   };
-
-  const decrementHour = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHour((prev) => (prev - 1 + 24) % 24);
-  };
-
-  const incrementMinute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setMinute((prev) => (prev + 1) % 60);
-  };
-
-  const decrementMinute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setMinute((prev) => (prev - 1 + 60) % 60);
-  };
-
-  const formatTime = (h: number, m: number) => {
-    const period = h >= 12 ? 'PM' : 'AM';
-    const displayHour = h % 12 || 12;
-    const displayMinute = m.toString().padStart(2, '0');
-    return { displayHour: displayHour.toString(), displayMinute, period };
-  };
-
-  const { displayHour, displayMinute, period } = formatTime(hour, minute);
 
   return (
     <LinearGradient colors={['#0a0a0a', '#1a1a2e', '#16213e']} style={styles.container}>
@@ -74,37 +56,15 @@ export default function AddAlarmScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.pickerContainer}>
-              <View style={styles.timePickerRow}>
-                <View style={styles.timeColumn}>
-                  <Pressable style={styles.pickerButton} onPress={incrementHour}>
-                    <Text style={styles.pickerButtonText}>▲</Text>
-                  </Pressable>
-                  <View style={styles.timeDisplay}>
-                    <Text style={styles.timeText}>{displayHour}</Text>
-                  </View>
-                  <Pressable style={styles.pickerButton} onPress={decrementHour}>
-                    <Text style={styles.pickerButtonText}>▼</Text>
-                  </Pressable>
-                </View>
-
-                <Text style={styles.timeSeparator}>:</Text>
-
-                <View style={styles.timeColumn}>
-                  <Pressable style={styles.pickerButton} onPress={incrementMinute}>
-                    <Text style={styles.pickerButtonText}>▲</Text>
-                  </Pressable>
-                  <View style={styles.timeDisplay}>
-                    <Text style={styles.timeText}>{displayMinute}</Text>
-                  </View>
-                  <Pressable style={styles.pickerButton} onPress={decrementMinute}>
-                    <Text style={styles.pickerButtonText}>▼</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.periodColumn}>
-                  <Text style={styles.periodText}>{period}</Text>
-                </View>
-              </View>
+              <DateTimePicker
+                value={date}
+                mode="time"
+                display="spinner"
+                onChange={onTimeChange}
+                textColor="#ffffff"
+                themeVariant="dark"
+                style={styles.timePicker}
+              />
             </View>
 
             <View style={styles.labelContainer}>
@@ -165,59 +125,9 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     paddingVertical: 32,
   },
-  timePickerRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 16,
-  },
-  timeColumn: {
-    alignItems: 'center' as const,
-    gap: 12,
-  },
-  periodColumn: {
-    justifyContent: 'center' as const,
-    marginLeft: 8,
-  },
-  pickerButton: {
-    width: 60,
-    height: 50,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#ffffff15',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ffffff10',
-  },
-  pickerButtonText: {
-    fontSize: 24,
-    color: '#ffffff',
-  },
-  timeDisplay: {
-    width: 100,
-    height: 120,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#ffffff12',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-  },
-  timeText: {
-    fontSize: 64,
-    fontWeight: '300' as const,
-    color: '#ffffff',
-    letterSpacing: -2,
-  },
-  timeSeparator: {
-    fontSize: 64,
-    fontWeight: '300' as const,
-    color: '#ffffff80',
-    marginBottom: 12,
-  },
-  periodText: {
-    fontSize: 28,
-    fontWeight: '600' as const,
-    color: '#ffffff90',
+  timePicker: {
+    height: 200,
+    width: '100%',
   },
   labelContainer: {
     gap: 12,

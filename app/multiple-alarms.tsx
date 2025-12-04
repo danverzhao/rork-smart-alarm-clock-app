@@ -13,18 +13,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function MultipleAlarmsScreen() {
   const router = useRouter();
   const { addMultipleAlarms } = useAlarms();
-  const [startHour, setStartHour] = useState<number>(9);
-  const [startMinute, setStartMinute] = useState<number>(0);
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(9);
+    d.setMinutes(0);
+    return d;
+  });
   const [intervalMinutes, setIntervalMinutes] = useState<number>(30);
   const [count, setCount] = useState<number>(5);
 
   const handleCreate = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addMultipleAlarms(startHour, startMinute, intervalMinutes, count);
+    addMultipleAlarms(startDate.getHours(), startDate.getMinutes(), intervalMinutes, count);
     router.back();
   };
 
@@ -33,24 +38,10 @@ export default function MultipleAlarmsScreen() {
     router.back();
   };
 
-  const incrementStartHour = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStartHour((prev) => (prev + 1) % 24);
-  };
-
-  const decrementStartHour = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStartHour((prev) => (prev - 1 + 24) % 24);
-  };
-
-  const incrementStartMinute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStartMinute((prev) => (prev + 1) % 60);
-  };
-
-  const decrementStartMinute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStartMinute((prev) => (prev - 1 + 60) % 60);
+  const onTimeChange = (_event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      setStartDate(selectedDate);
+    }
   };
 
   const incrementInterval = () => {
@@ -77,10 +68,8 @@ export default function MultipleAlarmsScreen() {
     const period = h >= 12 ? 'PM' : 'AM';
     const displayHour = h % 12 || 12;
     const displayMinute = m.toString().padStart(2, '0');
-    return { displayHour: displayHour.toString(), displayMinute, period };
+    return `${displayHour}:${displayMinute} ${period}`;
   };
-
-  const { displayHour, displayMinute, period } = formatTime(startHour, startMinute);
 
   return (
     <LinearGradient colors={['#0a0a0a', '#1a1a2e', '#16213e']} style={styles.container}>
@@ -96,37 +85,15 @@ export default function MultipleAlarmsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Start Time</Text>
               <View style={styles.pickerContainer}>
-                <View style={styles.timePickerRow}>
-                  <View style={styles.timeColumn}>
-                    <Pressable style={styles.pickerButton} onPress={incrementStartHour}>
-                      <Text style={styles.pickerButtonText}>▲</Text>
-                    </Pressable>
-                    <View style={styles.timeDisplay}>
-                      <Text style={styles.timeText}>{displayHour}</Text>
-                    </View>
-                    <Pressable style={styles.pickerButton} onPress={decrementStartHour}>
-                      <Text style={styles.pickerButtonText}>▼</Text>
-                    </Pressable>
-                  </View>
-
-                  <Text style={styles.timeSeparator}>:</Text>
-
-                  <View style={styles.timeColumn}>
-                    <Pressable style={styles.pickerButton} onPress={incrementStartMinute}>
-                      <Text style={styles.pickerButtonText}>▲</Text>
-                    </Pressable>
-                    <View style={styles.timeDisplay}>
-                      <Text style={styles.timeText}>{displayMinute}</Text>
-                    </View>
-                    <Pressable style={styles.pickerButton} onPress={decrementStartMinute}>
-                      <Text style={styles.pickerButtonText}>▼</Text>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.periodColumn}>
-                    <Text style={styles.periodText}>{period}</Text>
-                  </View>
-                </View>
+                <DateTimePicker
+                  value={startDate}
+                  mode="time"
+                  display="spinner"
+                  onChange={onTimeChange}
+                  textColor="#ffffff"
+                  themeVariant="dark"
+                  style={styles.timePicker}
+                />
               </View>
             </View>
 
@@ -165,7 +132,7 @@ export default function MultipleAlarmsScreen() {
             <View style={styles.previewContainer}>
               <Text style={styles.previewTitle}>Preview</Text>
               <Text style={styles.previewText}>
-                {count} alarms will be created starting at {displayHour}:{displayMinute} {period},
+                {count} alarms will be created starting at {formatTime(startDate.getHours(), startDate.getMinutes())},
                 with {intervalMinutes} minute intervals
               </Text>
             </View>
@@ -224,59 +191,9 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     paddingVertical: 16,
   },
-  timePickerRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
-  },
-  timeColumn: {
-    alignItems: 'center' as const,
-    gap: 8,
-  },
-  periodColumn: {
-    justifyContent: 'center' as const,
-    marginLeft: 8,
-  },
-  pickerButton: {
-    width: 50,
-    height: 40,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#ffffff15',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ffffff10',
-  },
-  pickerButtonText: {
-    fontSize: 20,
-    color: '#ffffff',
-  },
-  timeDisplay: {
-    width: 80,
-    height: 80,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#ffffff12',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-  },
-  timeText: {
-    fontSize: 40,
-    fontWeight: '300' as const,
-    color: '#ffffff',
-    letterSpacing: -1,
-  },
-  timeSeparator: {
-    fontSize: 40,
-    fontWeight: '300' as const,
-    color: '#ffffff80',
-    marginBottom: 8,
-  },
-  periodText: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: '#ffffff90',
+  timePicker: {
+    height: 200,
+    width: '100%',
   },
   numberPickerContainer: {
     flexDirection: 'row' as const,
