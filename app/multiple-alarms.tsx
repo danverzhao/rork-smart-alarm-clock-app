@@ -65,7 +65,7 @@ export default function MultipleAlarmsScreen() {
 
   const incrementCount = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCount((prev) => Math.min(prev + 1, 20));
+    setCount((prev) => Math.min(prev + 1, 60));
   };
 
   const decrementCount = () => {
