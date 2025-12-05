@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import type { Alarm, NotificationSound } from '@/types/alarm';
+import type { Alarm, NotificationSound, VibrationPattern } from '@/types/alarm';
 
 function AlarmItem({ alarm }: { alarm: Alarm }) {
   const { toggleAlarm, deleteAlarm } = useAlarms();
@@ -136,12 +136,13 @@ function AlarmItem({ alarm }: { alarm: Alarm }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { alarms, isLoading, alarmDuration, notificationSound, enableAll, disableAll, clearAll, updateAlarmDuration, updateNotificationSound } = useAlarms();
+  const { alarms, isLoading, alarmDuration, notificationSound, vibrationPattern, enableAll, disableAll, clearAll, updateAlarmDuration, updateNotificationSound, updateVibrationPattern } = useAlarms();
   const [ringingAlarm, setRingingAlarm] = useState<Alarm | null>(null);
   const ringingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [tempDuration, setTempDuration] = useState<string>('5');
   const [tempSound, setTempSound] = useState<NotificationSound>('noti1');
+  const [tempVibration, setTempVibration] = useState<VibrationPattern>('default');
 
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
@@ -225,6 +226,7 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTempDuration(alarmDuration.toString());
     setTempSound(notificationSound);
+    setTempVibration(vibrationPattern);
     setShowSettings(true);
   };
 
@@ -234,6 +236,7 @@ export default function HomeScreen() {
     if (!isNaN(duration) && duration > 0 && duration <= 300) {
       updateAlarmDuration(duration);
       updateNotificationSound(tempSound);
+      updateVibrationPattern(tempVibration);
       setShowSettings(false);
     } else {
       Alert.alert('Invalid Duration', 'Please enter a duration between 1 and 300 seconds.');
@@ -427,6 +430,44 @@ export default function HomeScreen() {
                   styles.soundOptionText,
                   tempSound === 'noti2' && styles.soundOptionTextSelected,
                 ]}>Sound 2</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Vibration Pattern</Text>
+            <View style={styles.soundSelector}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.soundOption,
+                  tempVibration === 'default' && styles.soundOptionSelected,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempVibration('default');
+                }}
+              >
+                <Text style={[
+                  styles.soundOptionText,
+                  tempVibration === 'default' && styles.soundOptionTextSelected,
+                ]}>Default</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.soundOption,
+                  tempVibration === 'double' && styles.soundOptionSelected,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempVibration('double');
+                }}
+              >
+                <Text style={[
+                  styles.soundOptionText,
+                  tempVibration === 'double' && styles.soundOptionTextSelected,
+                ]}>Double Buzz</Text>
               </Pressable>
             </View>
           </View>

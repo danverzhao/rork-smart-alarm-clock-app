@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-import type { Alarm, NotificationSound } from '@/types/alarm';
+import type { Alarm, NotificationSound, VibrationPattern } from '@/types/alarm';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -22,6 +22,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [alarmDuration, setAlarmDuration] = useState<number>(5);
   const [notificationSound, setNotificationSound] = useState<NotificationSound>('noti1');
+  const [vibrationPattern, setVibrationPattern] = useState<VibrationPattern>('default');
 
   useEffect(() => {
     loadAlarms();
@@ -60,6 +61,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         const settings = JSON.parse(stored);
         setAlarmDuration(settings.alarmDuration || 5);
         setNotificationSound(settings.notificationSound || 'noti1');
+        setVibrationPattern(settings.vibrationPattern || 'default');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -88,6 +90,17 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     }
   };
 
+  const updateVibrationPattern = async (pattern: VibrationPattern) => {
+    try {
+      setVibrationPattern(pattern);
+      const stored = await AsyncStorage.getItem(SETTINGS_KEY);
+      const settings = stored ? JSON.parse(stored) : {};
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, vibrationPattern: pattern }));
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
+  };
+
   const scheduleNotification = async (alarm: Alarm): Promise<string | undefined> => {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
@@ -105,12 +118,14 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       }
 
       const soundFile = notificationSound === 'noti1' ? 'noti1.wav' : 'noti2.wav';
+      const vibrate = vibrationPattern === 'double' ? [0, 200, 100, 200] : undefined;
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
           body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
           sound: soundFile,
+          vibrate,
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
         },
@@ -274,6 +289,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     isLoading,
     alarmDuration,
     notificationSound,
+    vibrationPattern,
     addAlarm,
     addMultipleAlarms,
     deleteAlarm,
@@ -281,6 +297,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     updateAlarmLabel,
     updateAlarmDuration,
     updateNotificationSound,
+    updateVibrationPattern,
     enableAll,
     disableAll,
     clearAll,

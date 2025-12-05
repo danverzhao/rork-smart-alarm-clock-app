@@ -9,3 +9,5 @@ export interface Alarm {
 }
 
 export type NotificationSound = 'noti1' | 'noti2';
+
+export type VibrationPattern = 'default' | 'double';
