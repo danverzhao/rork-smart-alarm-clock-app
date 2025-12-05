@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-import type { Alarm } from '@/types/alarm';
+import type { Alarm, NotificationSound } from '@/types/alarm';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,17 +17,11 @@ Notifications.setNotificationHandler({
 const STORAGE_KEY = 'alarms';
 const SETTINGS_KEY = 'alarm_settings';
 
-const SOUND_OPTIONS = [
-  { label: 'Default', value: 'default' },
-  { label: 'Notification 1', value: 'noti1' },
-  { label: 'Notification 2', value: 'noti2' },
-];
-
 export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [alarmDuration, setAlarmDuration] = useState<number>(5);
-  const [defaultSound, setDefaultSound] = useState<string>('default');
+  const [notificationSound, setNotificationSound] = useState<NotificationSound>('noti1');
 
   useEffect(() => {
     loadAlarms();
@@ -65,7 +59,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       if (stored) {
         const settings = JSON.parse(stored);
         setAlarmDuration(settings.alarmDuration || 5);
-        setDefaultSound(settings.defaultSound || 'default');
+        setNotificationSound(settings.notificationSound || 'noti1');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -83,12 +77,12 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     }
   };
 
-  const updateDefaultSound = async (sound: string) => {
+  const updateNotificationSound = async (sound: NotificationSound) => {
     try {
-      setDefaultSound(sound);
+      setNotificationSound(sound);
       const stored = await AsyncStorage.getItem(SETTINGS_KEY);
       const settings = stored ? JSON.parse(stored) : {};
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, defaultSound: sound }));
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, notificationSound: sound }));
     } catch (error) {
       console.error('Failed to save settings:', error);
     }
@@ -110,20 +104,13 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         alarmTime.setDate(alarmTime.getDate() + 1);
       }
 
-      const soundToUse = alarm.sound || defaultSound;
-      let soundConfig: boolean | string = true;
-      
-      if (soundToUse === 'noti1') {
-        soundConfig = 'noti1.wav';
-      } else if (soundToUse === 'noti2') {
-        soundConfig = 'noti2.wav';
-      }
+      const soundFile = notificationSound === 'noti1' ? 'noti1.wav' : 'noti2.wav';
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
           body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
-          sound: soundConfig,
+          sound: soundFile,
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
         },
@@ -134,7 +121,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         },
       });
 
-      console.log('Scheduled notification:', notificationId, 'for', alarmTime, 'with sound:', soundToUse);
+      console.log('Scheduled notification:', notificationId, 'for', alarmTime);
       return notificationId;
     } catch (error) {
       console.error('Failed to schedule notification:', error);
@@ -161,7 +148,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       label,
       isEnabled: true,
       createdAt: Date.now(),
-      sound: defaultSound,
     };
 
     const notificationId = await scheduleNotification(newAlarm);
@@ -188,7 +174,6 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         label: '',
         isEnabled: true,
         createdAt: Date.now() + i,
-        sound: defaultSound,
       };
 
       const notificationId = await scheduleNotification(alarm);
@@ -288,15 +273,14 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     alarms,
     isLoading,
     alarmDuration,
-    defaultSound,
-    soundOptions: SOUND_OPTIONS,
+    notificationSound,
     addAlarm,
     addMultipleAlarms,
     deleteAlarm,
     toggleAlarm,
     updateAlarmLabel,
     updateAlarmDuration,
-    updateDefaultSound,
+    updateNotificationSound,
     enableAll,
     disableAll,
     clearAll,
