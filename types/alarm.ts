@@ -7,3 +7,5 @@ export interface Alarm {
   createdAt: number;
   notificationId?: string;
 }
+
+export type NotificationSound = 'noti1' | 'noti2';

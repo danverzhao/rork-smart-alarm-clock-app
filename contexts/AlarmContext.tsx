@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-import type { Alarm } from '@/types/alarm';
+import type { Alarm, NotificationSound } from '@/types/alarm';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -21,6 +21,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [alarmDuration, setAlarmDuration] = useState<number>(5);
+  const [notificationSound, setNotificationSound] = useState<NotificationSound>('noti1');
 
   useEffect(() => {
     loadAlarms();
@@ -58,6 +59,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       if (stored) {
         const settings = JSON.parse(stored);
         setAlarmDuration(settings.alarmDuration || 5);
+        setNotificationSound(settings.notificationSound || 'noti1');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -67,7 +69,20 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const updateAlarmDuration = async (duration: number) => {
     try {
       setAlarmDuration(duration);
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ alarmDuration: duration }));
+      const stored = await AsyncStorage.getItem(SETTINGS_KEY);
+      const settings = stored ? JSON.parse(stored) : {};
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, alarmDuration: duration }));
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
+  };
+
+  const updateNotificationSound = async (sound: NotificationSound) => {
+    try {
+      setNotificationSound(sound);
+      const stored = await AsyncStorage.getItem(SETTINGS_KEY);
+      const settings = stored ? JSON.parse(stored) : {};
+      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, notificationSound: sound }));
     } catch (error) {
       console.error('Failed to save settings:', error);
     }
@@ -89,11 +104,13 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         alarmTime.setDate(alarmTime.getDate() + 1);
       }
 
+      const soundFile = notificationSound === 'noti1' ? 'noti1.wav' : 'noti2.wav';
+
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: alarm.label || 'Alarm',
           body: `${alarm.hour % 12 || 12}:${alarm.minute.toString().padStart(2, '0')} ${alarm.hour >= 12 ? 'PM' : 'AM'}`,
-          sound: true,
+          sound: soundFile,
           priority: Notifications.AndroidNotificationPriority.MAX,
           data: { alarmId: alarm.id },
         },
@@ -256,12 +273,14 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
     alarms,
     isLoading,
     alarmDuration,
+    notificationSound,
     addAlarm,
     addMultipleAlarms,
     deleteAlarm,
     toggleAlarm,
     updateAlarmLabel,
     updateAlarmDuration,
+    updateNotificationSound,
     enableAll,
     disableAll,
     clearAll,

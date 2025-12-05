@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import type { Alarm } from '@/types/alarm';
+import type { Alarm, NotificationSound } from '@/types/alarm';
 
 function AlarmItem({ alarm }: { alarm: Alarm }) {
   const { toggleAlarm, deleteAlarm } = useAlarms();
@@ -136,11 +136,12 @@ function AlarmItem({ alarm }: { alarm: Alarm }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { alarms, isLoading, alarmDuration, enableAll, disableAll, clearAll, updateAlarmDuration } = useAlarms();
+  const { alarms, isLoading, alarmDuration, notificationSound, enableAll, disableAll, clearAll, updateAlarmDuration, updateNotificationSound } = useAlarms();
   const [ringingAlarm, setRingingAlarm] = useState<Alarm | null>(null);
   const ringingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [tempDuration, setTempDuration] = useState<string>('5');
+  const [tempSound, setTempSound] = useState<NotificationSound>('noti1');
 
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
@@ -223,6 +224,7 @@ export default function HomeScreen() {
   const handleOpenSettings = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTempDuration(alarmDuration.toString());
+    setTempSound(notificationSound);
     setShowSettings(true);
   };
 
@@ -231,6 +233,7 @@ export default function HomeScreen() {
     const duration = parseInt(tempDuration, 10);
     if (!isNaN(duration) && duration > 0 && duration <= 300) {
       updateAlarmDuration(duration);
+      updateNotificationSound(tempSound);
       setShowSettings(false);
     } else {
       Alert.alert('Invalid Duration', 'Please enter a duration between 1 and 300 seconds.');
@@ -389,6 +392,44 @@ export default function HomeScreen() {
             />
           </View>
           <Text style={styles.settingHint}>Duration: 1-300 seconds</Text>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Notification Sound</Text>
+            <View style={styles.soundSelector}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.soundOption,
+                  tempSound === 'noti1' && styles.soundOptionSelected,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempSound('noti1');
+                }}
+              >
+                <Text style={[
+                  styles.soundOptionText,
+                  tempSound === 'noti1' && styles.soundOptionTextSelected,
+                ]}>Sound 1</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.soundOption,
+                  tempSound === 'noti2' && styles.soundOptionSelected,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempSound('noti2');
+                }}
+              >
+                <Text style={[
+                  styles.soundOptionText,
+                  tempSound === 'noti2' && styles.soundOptionTextSelected,
+                ]}>Sound 2</Text>
+              </Pressable>
+            </View>
+          </View>
           <View style={styles.modalButtons}>
             <Pressable
               style={({ pressed }) => [
@@ -735,6 +776,33 @@ const styles = StyleSheet.create({
   modalButtonTextPrimary: {
     fontSize: 16,
     fontWeight: '600' as const,
+    color: '#ffffff',
+  },
+  soundSelector: {
+    flexDirection: 'row' as const,
+    gap: 12,
+  },
+  soundOption: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffffff12',
+    borderWidth: 1,
+    borderColor: '#ffffff20',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  soundOptionSelected: {
+    backgroundColor: '#007AFF30',
+    borderColor: '#007AFF',
+  },
+  soundOptionText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#ffffff80',
+  },
+  soundOptionTextSelected: {
     color: '#ffffff',
   },
 });
