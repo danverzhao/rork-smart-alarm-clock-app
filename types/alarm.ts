@@ -8,6 +8,6 @@ export interface Alarm {
   notificationId?: string;
 }
 
-export type NotificationSound = 'noti1' | 'noti2';
+export type NotificationSound = 'default' | 'noti1' | 'noti2';
 
 export type VibrationPattern = 'default' | 'double';

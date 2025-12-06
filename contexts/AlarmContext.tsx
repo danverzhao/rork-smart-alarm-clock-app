@@ -21,7 +21,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [alarmDuration, setAlarmDuration] = useState<number>(5);
-  const [notificationSound, setNotificationSound] = useState<NotificationSound>('noti1');
+  const [notificationSound, setNotificationSound] = useState<NotificationSound>('default');
   const [vibrationPattern, setVibrationPattern] = useState<VibrationPattern>('default');
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
       if (stored) {
         const settings = JSON.parse(stored);
         setAlarmDuration(settings.alarmDuration || 5);
-        setNotificationSound(settings.notificationSound || 'noti1');
+        setNotificationSound(settings.notificationSound || 'default');
         setVibrationPattern(settings.vibrationPattern || 'default');
       }
     } catch (error) {
@@ -117,7 +117,7 @@ export const [AlarmProvider, useAlarms] = createContextHook(() => {
         alarmTime.setDate(alarmTime.getDate() + 1);
       }
 
-      const soundFile = notificationSound === 'noti1' ? 'noti1.wav' : 'noti2.wav';
+      const soundFile = notificationSound === 'noti1' ? 'noti1.wav' : notificationSound === 'noti2' ? 'noti2.wav' : undefined;
       const vibrate = vibrationPattern === 'double' ? [0, 200, 100, 200] : undefined;
 
       const notificationId = await Notifications.scheduleNotificationAsync({

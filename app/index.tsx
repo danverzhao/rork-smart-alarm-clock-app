@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import type { Alarm, NotificationSound } from '@/types/alarm';
 
 function AlarmItem({ alarm }: { alarm: Alarm }) {
@@ -139,7 +140,8 @@ export default function HomeScreen() {
   const [ringingAlarm, setRingingAlarm] = useState<Alarm | null>(null);
   const ringingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [tempSound, setTempSound] = useState<NotificationSound>('noti1');
+  const [tempSound, setTempSound] = useState<NotificationSound>('default');
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
@@ -225,10 +227,37 @@ export default function HomeScreen() {
     setShowSettings(true);
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
     updateNotificationSound(tempSound);
     setShowSettings(false);
+  };
+
+  const playSound = async (sound: NotificationSound) => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      if (sound === 'default') {
+        return;
+      }
+
+      const soundFile = sound === 'noti1' 
+        ? require('@/assets/sounds/noti1.wav')
+        : require('@/assets/sounds/noti2.wav');
+
+      const { sound: audioSound } = await Audio.Sound.createAsync(soundFile);
+      soundRef.current = audioSound;
+      await audioSound.playAsync();
+    } catch (error) {
+      console.error('Failed to play sound:', error);
+    }
   };
 
   if (isLoading) {
@@ -365,7 +394,13 @@ export default function HomeScreen() {
       visible={showSettings}
       transparent
       animationType="fade"
-      onRequestClose={() => setShowSettings(false)}
+      onRequestClose={async () => {
+        if (soundRef.current) {
+          await soundRef.current.unloadAsync();
+          soundRef.current = null;
+        }
+        setShowSettings(false);
+      }}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
@@ -377,12 +412,30 @@ export default function HomeScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.soundOption,
+                  tempSound === 'default' && styles.soundOptionSelected,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempSound('default');
+                  playSound('default');
+                }}
+              >
+                <Text style={[
+                  styles.soundOptionText,
+                  tempSound === 'default' && styles.soundOptionTextSelected,
+                ]}>Default</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.soundOption,
                   tempSound === 'noti1' && styles.soundOptionSelected,
                   pressed && styles.buttonPressed,
                 ]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setTempSound('noti1');
+                  playSound('noti1');
                 }}
               >
                 <Text style={[
@@ -399,6 +452,7 @@ export default function HomeScreen() {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setTempSound('noti2');
+                  playSound('noti2');
                 }}
               >
                 <Text style={[
@@ -416,7 +470,13 @@ export default function HomeScreen() {
                 styles.modalButtonSecondary,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={() => setShowSettings(false)}
+              onPress={async () => {
+                if (soundRef.current) {
+                  await soundRef.current.unloadAsync();
+                  soundRef.current = null;
+                }
+                setShowSettings(false);
+              }}
             >
               <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
             </Pressable>
