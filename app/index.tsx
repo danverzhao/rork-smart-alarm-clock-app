@@ -245,6 +245,7 @@ export default function HomeScreen() {
       }
 
       if (sound === 'default') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         return;
       }
 
@@ -252,11 +253,20 @@ export default function HomeScreen() {
         ? require('@/assets/sounds/noti1.wav')
         : require('@/assets/sounds/noti2.wav');
 
-      const { sound: audioSound } = await Audio.Sound.createAsync(soundFile);
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      const { sound: audioSound } = await Audio.Sound.createAsync(soundFile, { shouldPlay: true });
       soundRef.current = audioSound;
-      await audioSound.playAsync();
     } catch (error) {
       console.error('Failed to play sound:', error);
+      Alert.alert(
+        'Audio Error',
+        'The audio file format is not supported. Please convert your WAV files to MP3 or M4A format. WAV files must be PCM encoded at 8kHz-48kHz, 8-bit or 16-bit.'
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
